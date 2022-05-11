@@ -1,4 +1,4 @@
-import React, {ReactNode} from 'react';
+import React, {ReactNode, useMemo} from 'react';
 import {useEffect, useState} from 'react';
 import {
   ScrollView,
@@ -14,14 +14,14 @@ import {
   TouchableOpacity,
 } from 'react-native';
 
-interface Props {
+interface Movie {
   item: string;
   poster: string;
   title: string;
   episode_number: string;
 }
 
-const Item = (props: Props) => (
+const Item = (props: Movie) => (
   <View style={styles.container}>
     <Image
       style={styles.poster}
@@ -37,7 +37,7 @@ const Item = (props: Props) => (
 );
 
 const App = () => {
-  const renderItem: ListRenderItem<Props> = ({item}) => (
+  const renderItem: ListRenderItem<Movie> = ({item}) => (
     <Item
       item={item.item}
       title={item.title}
@@ -47,8 +47,21 @@ const App = () => {
   );
 
   const [isLoading, setLoading] = useState<boolean>(true);
-  const [data, setData] = useState<Props[]>();
-  const [sortedby, setSortedby] = useState<string>('Asc');
+  const [data, setData] = useState<Movie[]>();
+  const [isAscending, setisAscending] = useState<boolean>(true);
+  const mSorter = useMemo(() => {
+    if (data === undefined) {
+      return;
+    } else {
+      return [...data].sort((a, b) => {
+        function compareBy(data: Movie) {
+          return data.episode_number;
+        }
+        const lgc = parseInt(compareBy(b)) < parseInt(compareBy(a)) ? 1 : -1;
+        return isAscending === true ? lgc : lgc * -1;
+      });
+    }
+  }, [data, isAscending]);
 
   const getMovies = async () => {
     try {
@@ -72,42 +85,7 @@ const App = () => {
     <View>
       <Button
         onPress={() => {
-          if (data === undefined) {
-            return;
-          }
-          if (sortedby === 'Desc') {
-            setSortedby('Asc');
-            setData(
-              data.sort((a, b) => {
-                const nameA = parseInt(a.episode_number);
-                const nameB = parseInt(b.episode_number);
-
-                if (nameA < nameB) {
-                  return -1;
-                }
-                if (nameA > nameB) {
-                  return 1;
-                }
-                return 0;
-              }),
-            );
-          } else {
-            setSortedby('Desc');
-            setData(
-              data.sort((a, b) => {
-                const nameA = parseInt(a.episode_number);
-                const nameB = parseInt(b.episode_number);
-
-                if (nameA < nameB) {
-                  return 1;
-                }
-                if (nameA > nameB) {
-                  return -1;
-                }
-                return 0;
-              }),
-            );
-          }
+          setisAscending(!isAscending);
         }}
         title="Sort"
       />
@@ -115,7 +93,7 @@ const App = () => {
         <ActivityIndicator />
       ) : (
         <FlatList
-          data={data}
+          data={mSorter}
           renderItem={renderItem}
           keyExtractor={item => item.title}
         />
